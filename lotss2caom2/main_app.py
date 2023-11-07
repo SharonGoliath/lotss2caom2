@@ -66,32 +66,55 @@
 # ***********************************************************************
 #
 
+"""
+This module implements the ObsBlueprint mapping, as well as the workflow 
+entry point that executes the workflow.
+"""
+
+from os.path import basename
+
+from caom2pipe import caom_composable as cc
 from caom2pipe import manage_composable as mc
-from blank2caom2 import BlankName
 
 
-def test_is_valid():
-    assert BlankName('anything').is_valid()
-    
+__all__ = [
+    'lotssMapping',
+    'lotssName',
+]
 
-def test_storage_name(test_config):
-    test_obs_id = 'TEST_OBS_ID'
-    test_f_name = f'{test_obs_id}.fits'
-    test_uri = f'{test_config.scheme}:{test_config.collection}/{test_f_name}'
-   for index, entry in enumerate(
-        [
-            test_f_name, 
-            test_uri, 
-            f'https://localhost:8020/{test_f_name}', 
-            f'vos:goliaths/test/{test_f_name}',
-            f'/tmp/{test_f_name}',
-        ]   
-    ):
-        test_subject = BlankName(entry)
-        assert test_subject.file_id == test_f_name.replace('.fits', '').replace('.header', ''), f'wrong file id {index}'
-        assert test_subject.file_uri == test_uri, f'wrong uri {index}'
-        assert test_subject.obs_id == test_obs_id, f'wrong obs id {index}'
-        assert test_subject.product_id == test_obs_id, f'wrong product id {index}'
-        assert test_subject.source_names == [entry], f'wrong source names {index}'
-        assert test_subject.destination_uris == [test_uri], f'wrong uris {index} {test_subject}'
 
+class lotssName(mc.StorageName):
+    """Naming rules:
+    - support mixed-case file name storage, and mixed-case obs id values
+    - support uncompressed files in storage
+    """
+
+    LOTSS_NAME_PATTERN = '*'
+
+    def __init__(self, entry):
+        super().__init__(file_name=basename(entry), source_names=[entry])
+
+    def is_valid(self):
+        return True
+
+
+class lotssMapping(cc.TelescopeMapping):
+    def __init__(self, storage_name, headers, clients, observable, observation):
+        super().__init__(storage_name, headers, clients, observable, observation)
+
+    def accumulate_blueprint(self, bp):
+        """Configure the telescope-specific ObsBlueprint at the CAOM model Observation level."""
+        self._logger.debug('Begin accumulate_bp.')
+        super().accumulate_blueprint(bp)
+        bp.configure_position_axes((1, 2))
+        bp.configure_time_axis(3)
+        bp.configure_energy_axis(4)
+        bp.configure_polarization_axis(5)
+        bp.configure_observable_axis(6)
+        self._logger.debug('Done accumulate_bp.')
+
+    def update(self, file_info):
+        """Called to fill multiple CAOM model elements and/or attributes (an n:n relationship between TDM attributes 
+        and CAOM attributes).
+        """
+        return super().update(file_info)

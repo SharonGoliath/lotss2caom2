@@ -1,8 +1,9 @@
+# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2023.                            (c) 2023.
+#  (c) PST.                            (c) PST.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -66,61 +67,23 @@
 # ***********************************************************************
 #
 
-"""
-Implements the default entry point functions for the workflow 
-application.
+from caom2pipe.manage_composable import Config, StorageName
+import pytest
 
-'run' executes based on either provided lists of work, or files on disk.
-'run_incremental' executes incrementally, usually based on time-boxed intervals.
-"""
-
-import logging
-import sys
-import traceback
-
-from caom2pipe.run_composable import run_by_state, run_by_todo
-from blank2caom2 import fits2caom2_augmentation
+COLLECTION = 'LOTSS'
+SCHEME = 'cadc'
+PREVIEW_SCHEME = 'cadc'
 
 
-META_VISITORS = [fits2caom2_augmentation]
-DATA_VISITORS = []
+@pytest.fixture()
+def test_config():
+    config = Config()
+    config.collection = COLLECTION
+    config.preview_scheme = PREVIEW_SCHEME
+    config.scheme = SCHEME
+    config.logging_level = 'INFO'
+    StorageName.collection = config.collection
+    StorageName.preview_scheme = config.preview_scheme
+    StorageName.scheme = config.scheme
+    return config
 
-
-def _run():
-    """
-    Uses a todo file to identify the work to be done.
-
-    :return 0 if successful, -1 if there's any sort of failure. Return status
-        is used by airflow for task instance management and reporting.
-    """
-    return run_by_todo(meta_visitors=META_VISITORS, data_visitors=DATA_VISITORS)
-
-
-def run():
-    """Wraps _run in exception handling, with sys.exit calls."""
-    try:
-        result = _run()
-        sys.exit(result)
-    except Exception as e:
-        logging.error(e)
-        tb = traceback.format_exc()
-        logging.debug(tb)
-        sys.exit(-1)
-
-
-def _run_incremental():
-    """Uses a state file with a timestamp to identify the work to be done.
-    """
-    return run_by_state(meta_visitors=META_VISITORS, data_visitors=DATA_VISITORS)
-
-
-def run_incremental():
-    """Wraps _run_incremental in exception handling."""
-    try:
-        _run_incremental()
-        sys.exit(0)
-    except Exception as e:
-        logging.error(e)
-        tb = traceback.format_exc()
-        logging.debug(tb)
-        sys.exit(-1)

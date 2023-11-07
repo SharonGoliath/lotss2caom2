@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) 2023.                            (c) 2023.
+#  (c) PST.                            (c) PST.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -61,54 +61,26 @@
 #  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 #                                       <http://www.gnu.org/licenses/>.
 #
-#  $Revision: 4 $
+#  : 4 $
 #
 # ***********************************************************************
 #
 
-import os
 
-from mock import patch
-
-from caom2pipe import manage_composable as mc
-from blank2caom2 import composable
+from caom2pipe import caom_composable as cc
+from lotss2caom2 import main_app
 
 
-def test_run_by_state():
-    pass
+__all__ = ['lotssFits2caom2Visitor']
 
 
-@patch('cadcutils.net.ws.WsCapabilities.get_access_url')
-@patch('caom2pipe.execute_composable.OrganizeExecutes.do_one')
-def test_run(run_mock, access_mock, test_config, tmp_path):
-    run_mock.return_value = 0
-    access_mock.return_value = 'https://localhost'
-    test_f_id = 'test_file_id'
-    test_f_name = f'{test_f_id}.fits'
-    orig_cwd = os.getcwd()
-    try:
-        os.chdir(tmp_path.as_posix())
-        test_config.change_working_directory(tmp_path.as_posix())
-        test_config.proxy_file_name = 'test_proxy.fqn'
-        test_config.write_to_file(test_config)
+class lotssFits2caom2Visitor(cc.Fits2caom2Visitor):
+    def __init__(self, observation, **kwargs):
+        super().__init__(observation, **kwargs)
 
-        with open(test_config.proxy_fqn, 'w') as f:
-            f.write('test content')
-        with open(test_config.work_fqn, 'w') as f:
-            f.write(test_f_name)
+    def _get_mapping(self, headers):
+        return main_app.lotssMapping(self._storage_name, headers, self._clients, self._observable, self._observation)
 
-        try:
-            # execution
-            test_result = composable._run()
-        except Exception as e:
-            assert False, e
 
-        assert test_result == 0, 'wrong return value'
-        assert run_mock.called, 'should have been called'
-        args, kwargs = run_mock.call_args
-        test_storage = args[0]
-        assert isinstance(test_storage, mc.StorageName), type(test_storage)
-        assert test_storage.file_name == test_f_name, 'wrong file name'
-        assert test_storage.source_names[0] == test_f_name, 'wrong fname on disk'
-    finally:
-        os.chdir(orig_cwd)
+def visit(observation, **kwargs):
+    return lotssFits2caom2Visitor(observation, **kwargs).visit()
