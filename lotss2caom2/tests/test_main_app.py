@@ -89,27 +89,26 @@ def pytest_generate_tests(metafunc):
 
 
 @patch('lotss2caom2.metadata_reader.http_get')
-@patch('lotss2caom2.metadata_reader.query_endpoint_session')
 @patch('lotss2caom2.clients.ASTRONClientCollection')
-def test_main_app(clients_mock, endpoint_mock, http_get_mock, test_name, test_config):
+def test_main_app(clients_mock, http_get_mock, test_name, test_config):
     clients_mock.py_vo_tap_client.search.side_effect = helpers._search_mosaic_id_mock
 
-    def _endpoint_mock(url, ignore_session):
+    def _endpoint_mock(url):
         result = type('response', (), {})()
         result.close = lambda : None
-        with open(f'{test_name}/Datalink_response_obs.html') as f:
+        with open(f'{test_name}/obs.xml') as f:
             result.text = f.read()
         return result
 
-    endpoint_mock.side_effect = _endpoint_mock
+    clients_mock.https_session.get.side_effect = _endpoint_mock
 
-    def _http_get_mock(url, fqn):
+    def _http_get_mock(url, fqn, ignore_timeout):
         assert fqn == '/tmp/fits_headers.tar', f'wrong url {fqn}'
         shutil.copy(f'{test_name}/fits_headers.tar', '/tmp')
 
     http_get_mock.side_effect = _http_get_mock
     storage_name = main_app.LOTSSName(test_name)
-    test_reader = metadata_reader.LOTSSDR2MetadataReader(clients_mock)
+    test_reader = metadata_reader.LOTSSDR2MetadataReader(clients_mock, test_config.http_get_timeout)
     test_reader.set(storage_name)
     kwargs = {
         'storage_name': storage_name,

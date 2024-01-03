@@ -145,6 +145,7 @@ class LOTSSDR2MetadataReader(MetadataReader):
     def _get_headers_metadata(self):
         """Retrieve the file that has all the header metadata in it, and get all the metadata from that file,
         for each of files."""
+        self._logger.debug(f'Begin _get_headers_metadata for {self._headers_uri}')
         if self._headers_uri:
             local_fqn = f'/tmp/{basename(self._headers_uri)}'
             if exists(local_fqn):
@@ -167,6 +168,7 @@ class LOTSSDR2MetadataReader(MetadataReader):
                         self._logger.debug(f'Retrieve headers for {found_uri}')
                     else:
                         self._logger.warning(f'Unexpected file header {entry}')
+        self._logger.debug('End _get_headers_metadata')
 
     def _reset(self):
         self._mosaic_id = None

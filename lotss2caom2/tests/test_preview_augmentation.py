@@ -86,30 +86,27 @@ def pytest_generate_tests(metafunc):
 
 @patch('lotss2caom2.preview_augmentation.http_get')
 @patch('lotss2caom2.metadata_reader.http_get')
-@patch('lotss2caom2.metadata_reader.query_endpoint_session')
 @patch('lotss2caom2.clients.ASTRONClientCollection')
-def test_preview_augmentation(clients_mock, endpoint_mock, http_get_mock, preview_get_mock, test_config, test_name):
-    import logging
-    logging.getLogger().setLevel(logging.DEBUG)
+def test_preview_augmentation(clients_mock, http_get_mock, preview_get_mock, test_config, test_name):
     clients_mock.py_vo_tap_client.search.side_effect = helpers._search_mosaic_id_mock
 
-    def _endpoint_mock(url, ignore_session):
+    def _endpoint_mock(url):
         result = type('response', (), {})()
         result.close = lambda : None
-        with open(f'{test_name}/Datalink_response_obs.html') as f:
+        with open(f'{test_name}/obs.xml') as f:
             result.text = f.read()
         return result
 
-    endpoint_mock.side_effect = _endpoint_mock
+    clients_mock.https_session.get.side_effect = _endpoint_mock
 
-    def _http_get_tar_mock(url, fqn):
+    def _http_get_tar_mock(url, fqn, ignore_timeout):
         shutil.copy(f'{test_name}/fits_headers.tar', fqn)
 
     http_get_mock.side_effect = _http_get_tar_mock
     preview_get_mock.side_effect = Mock()
     observation = read_obs_from_file(f'{test_name}/{basename(test_name)}.expected.xml')
     storage_name = LOTSSName(test_name)
-    test_reader = LOTSSDR2MetadataReader(clients_mock)
+    test_reader = LOTSSDR2MetadataReader(clients_mock, test_config.http_get_timeout)
     test_reader.set(storage_name)
     kwargs = {
         'working_directory': test_name,
