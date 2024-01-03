@@ -1,9 +1,8 @@
-# -*- coding: utf-8 -*-
 # ***********************************************************************
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) PST.                            (c) PST.
+#  (c) 2023.                            (c) 2023.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,12 +66,13 @@
 # ***********************************************************************
 #
 
+from os.path import dirname, join, realpath
 from caom2pipe.manage_composable import Config, StorageName
 import pytest
 
 COLLECTION = 'LOTSS'
-SCHEME = 'cadc'
-PREVIEW_SCHEME = 'cadc'
+SCHEME = 'astron'
+PREVIEW_SCHEME = 'astron'
 
 
 @pytest.fixture()
@@ -87,3 +87,14 @@ def test_config():
     StorageName.scheme = config.scheme
     return config
 
+
+@pytest.fixture()
+def test_data_dir():
+    this_dir = dirname(realpath(__file__))
+    fqn = join(this_dir, 'data')
+    return fqn
+
+
+@pytest.fixture()
+def change_test_dir(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)

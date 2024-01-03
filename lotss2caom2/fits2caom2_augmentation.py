@@ -2,7 +2,7 @@
 # ******************  CANADIAN ASTRONOMY DATA CENTRE  *******************
 # *************  CENTRE CANADIEN DE DONNÉES ASTRONOMIQUES  **************
 #
-#  (c) PST.                            (c) PST.
+#  (c) 2023.                            (c) 2023.
 #  Government of Canada                 Gouvernement du Canada
 #  National Research Council            Conseil national de recherches
 #  Ottawa, Canada, K1A 0R6              Ottawa, Canada, K1A 0R6
@@ -67,20 +67,38 @@
 #
 
 
+from caom2 import ProductType
+from caom2utils import BlueprintParser, FitsParser
 from caom2pipe import caom_composable as cc
 from lotss2caom2 import main_app
 
 
-__all__ = ['lotssFits2caom2Visitor']
+__all__ = ['LoTSSFits2caom2Visitor']
 
 
-class lotssFits2caom2Visitor(cc.Fits2caom2Visitor):
+class LoTSSFits2caom2Visitor(cc.Fits2caom2Visitor):
     def __init__(self, observation, **kwargs):
         super().__init__(observation, **kwargs)
 
     def _get_mapping(self, headers):
-        return main_app.lotssMapping(self._storage_name, headers, self._clients, self._observable, self._observation)
+        return main_app.mapping_factory(
+            self._storage_name,
+            headers,
+            self._clients,
+            self._observable,
+            self._observation,
+            self._config,
+            self._metadata_reader.headers[self._storage_name.mosaic_id],
+        )
+
+    def _get_parser(self, headers, blueprint, uri):
+        if self._storage_name.artifact_product_type in [ProductType.AUXILIARY, ProductType.WEIGHT, ProductType.PREVIEW]:
+            parser = BlueprintParser(blueprint, uri)
+        else:
+            parser = FitsParser(headers, blueprint, uri)
+        self._logger.debug(f'Creating {parser.__class__.__name__} for {self._storage_name.file_uri}')
+        return parser
 
 
 def visit(observation, **kwargs):
-    return lotssFits2caom2Visitor(observation, **kwargs).visit()
+    return LoTSSFits2caom2Visitor(observation, **kwargs).visit()

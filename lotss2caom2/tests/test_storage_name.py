@@ -66,32 +66,33 @@
 # ***********************************************************************
 #
 
-from caom2pipe import manage_composable as mc
-from lotss2caom2 import lotssName
+from lotss2caom2 import LOTSSName
 
 
 def test_is_valid():
-    assert lotssName('anything').is_valid()
-    
+    assert LOTSSName('anything').is_valid()
+
 
 def test_storage_name(test_config):
-    test_obs_id = 'TEST_OBS_ID'
-    test_f_name = f'{test_obs_id}.fits'
-    test_uri = f'{test_config.scheme}:{test_config.collection}/{test_f_name}'
-   for index, entry in enumerate(
+    test_mosaic_id = 'P124+62'
+    test_obs_id = f'{test_mosaic_id}_dr2'
+    test_f_name = f'mosaic.rms.fits'
+    test_uri = f'{test_config.scheme}:{test_config.collection}/preview.jpg'
+    for index, entry in enumerate(
         [
-            test_f_name, 
-            test_uri, 
-            f'https://localhost:8020/{test_f_name}', 
-            f'vos:goliaths/test/{test_f_name}',
-            f'/tmp/{test_f_name}',
-        ]   
+            f'{test_mosaic_id}',
+            f'https://localhost:8020/{test_mosaic_id}',
+            f'vos:goliaths/test/{test_mosaic_id}',
+            f'/tmp/{test_mosaic_id}',
+        ]
     ):
-        test_subject = lotssName(entry)
-        assert test_subject.file_id == test_f_name.replace('.fits', '').replace('.header', ''), f'wrong file id {index}'
+        test_subject = LOTSSName(entry)
+        assert test_subject.file_id is None, f'wrong file id {index}'
         assert test_subject.file_uri == test_uri, f'wrong uri {index}'
         assert test_subject.obs_id == test_obs_id, f'wrong obs id {index}'
-        assert test_subject.product_id == test_obs_id, f'wrong product id {index}'
+        assert test_subject.product_id == 'mosaic', f'wrong product id {index}'
         assert test_subject.source_names == [entry], f'wrong source names {index}'
-        assert test_subject.destination_uris == [test_uri], f'wrong uris {index} {test_subject}'
+        assert (
+            test_subject.destination_uris == [f'{test_config.collection}/{test_mosaic_id}/']
+        ), f'wrong uris {index} {test_subject}'
 

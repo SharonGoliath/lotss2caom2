@@ -61,85 +61,89 @@
 #  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 #                                       <http://www.gnu.org/licenses/>.
 #
-#  $Revision: 4 $
+#  Revision: 4
 #
 # ***********************************************************************
 #
 
-from mock import patch
-
-from lotss2caom2 import fits2caom2_augmentation, main_app, metadata_reader
-from caom2.diff import get_differences
-from caom2pipe import astro_composable as ac
-from caom2pipe import manage_composable as mc
-from caom2pipe import reader_composable as rdc
-
-import glob
-import helpers
+import logging
 import os
 import shutil
 
-THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-TEST_DATA_DIR = os.path.join(THIS_DIR, 'data')
+from caom2 import ReleaseType, ProductType
+from caom2pipe.manage_composable import CadcException, http_get, PreviewVisitor, StorageName
 
 
-def pytest_generate_tests(metafunc):
-    obs_id_list = glob.glob(f'{TEST_DATA_DIR}/P*')
-    metafunc.parametrize('test_name', obs_id_list)
+class LOTSSPreview(PreviewVisitor):
+    """
+    Generate a small thumbnail from a previously existing preview image. Override most of the existing
+    class, because the original science file is unnecessary.
+    """
+
+    def __init__(self, **kwargs):
+        self._logger = logging.getLogger(self.__class__.__name__)
+        self._release_type = ReleaseType.META
+        self._mime_type = 'image/jpeg'
+        self._working_dir = kwargs.get('working_directory', './')
+        self._clients = kwargs.get('clients')
+        if self._clients is None or self._clients.data_client is None:
+            self._logger.warning('Visitor needs a clients.data_client parameter to store previews.')
+        self._storage_name = kwargs.get('storage_name')
+        if self._storage_name is None:
+            raise CadcException('Visitor needs a storage_name parameter.')
+        self._metadata_reader = kwargs.get('metadata_reader')
+        self._preview_fqn = os.path.join(
+            self._working_dir, self._storage_name.prev
+        )
+        self._thumb_fqn = os.path.join(
+            self._working_dir, self._storage_name.thumb
+        )
+        self._delete_list = []
+        # keys are uris, values are lists, where the 0th entry is a file name,
+        # and the 1th entry is the artifact type
+        self._previews = {}
+        self._report = None
+        self._hdu_list = None
+        self._ext = None
+        self._storage_name._file_name = 'preview.jpg'
+        self._input_fqn = self._storage_name.get_file_fqn(self._working_dir)
+        self._preview_fqn = os.path.join(os.path.dirname(self._input_fqn), self._storage_name.prev)
+        self._thumb_fqn = os.path.join(os.path.dirname(self._input_fqn), self._storage_name.thumb)
+        self._logger.error(f'input {self._input_fqn} prev {self._preview_fqn} thumb {self._thumb_fqn}')
+        self._logger.debug(self)
+
+    def visit(self, observation):
+        count = 0
+        if self._storage_name.product_id in observation.planes.keys():
+            plane = observation.planes[self._storage_name.product_id]
+            self._logger.error(
+                f'Preview generation for observation {observation.observation_id}, plane {plane.product_id}.'
+            )
+            count += self._do_prev(plane, observation.observation_id)
+            self._augment_artifacts(plane)
+            self._delete_list_of_files()
+        self._logger.info(f'Completed preview augmentation for {observation.observation_id}. Changed {count} artifacts.')
+        self._report = {'artifacts': count}
+        return observation
+
+    def generate_plots(self, obs_id):
+        count = 0
+        self._logger.debug(f'Begin generate_plots for {obs_id} from {self._metadata_reader._preview_uri}')
+        if self._metadata_reader._preview_uri:
+            http_get(self._metadata_reader._preview_uri, self._input_fqn)
+            if os.path.exists(self._input_fqn):
+                self._logger.info(f'Retrieved {self._input_fqn}')
+                shutil.copy(self._input_fqn, self._preview_fqn)
+                self.add_preview(self._storage_name.prev_uri, self._storage_name.prev, ProductType.PREVIEW)
+                count += self._gen_thumbnail()
+                if count == 1:
+                    self.add_preview(
+                        self._storage_name.thumb_uri, self._storage_name.thumb, ProductType.THUMBNAIL
+                    )
+        self._logger.debug(f'End generate_plots')
+        return count
 
 
-@patch('lotss2caom2.metadata_reader.http_get')
-@patch('lotss2caom2.metadata_reader.query_endpoint_session')
-@patch('lotss2caom2.clients.ASTRONClientCollection')
-def test_main_app(clients_mock, endpoint_mock, http_get_mock, test_name, test_config):
-    clients_mock.py_vo_tap_client.search.side_effect = helpers._search_mosaic_id_mock
-
-    def _endpoint_mock(url, ignore_session):
-        result = type('response', (), {})()
-        result.close = lambda : None
-        with open(f'{test_name}/Datalink_response_obs.html') as f:
-            result.text = f.read()
-        return result
-
-    endpoint_mock.side_effect = _endpoint_mock
-
-    def _http_get_mock(url, fqn):
-        assert fqn == '/tmp/fits_headers.tar', f'wrong url {fqn}'
-        shutil.copy(f'{test_name}/fits_headers.tar', '/tmp')
-
-    http_get_mock.side_effect = _http_get_mock
-    storage_name = main_app.LOTSSName(test_name)
-    test_reader = metadata_reader.LOTSSDR2MetadataReader(clients_mock)
-    test_reader.set(storage_name)
-    kwargs = {
-        'storage_name': storage_name,
-        'metadata_reader': test_reader,
-        'config': test_config,
-    }
-    expected_fqn = f'{test_name}/{os.path.basename(test_name)}.expected.xml'
-    in_fqn = expected_fqn.replace('.expected', '.in')
-    actual_fqn = expected_fqn.replace('expected', 'actual')
-    if os.path.exists(actual_fqn):
-        os.unlink(actual_fqn)
-    observation = None
-    if os.path.exists(in_fqn):
-        observation = mc.read_obs_from_file(in_fqn)
-    observation = fits2caom2_augmentation.visit(observation, **kwargs)
-    if observation is None:
-        assert False, f'Did not create observation for {test_name}'
-    else:
-        if os.path.exists(expected_fqn):
-            expected = mc.read_obs_from_file(expected_fqn)
-            compare_result = get_differences(expected, observation)
-            if compare_result is not None:
-                mc.write_obs_to_file(observation, actual_fqn)
-                compare_text = '\n'.join([r for r in compare_result])
-                msg = (
-                    f'Differences found in observation {expected.observation_id}\n'
-                    f'{compare_text}'
-                )
-                raise AssertionError(msg)
-        else:
-            mc.write_obs_to_file(observation, actual_fqn)
-            assert False, f'nothing to compare to for {test_name}, missing {expected_fqn}'
-    # assert False  # cause I want to see logging messages
+def visit(observation, **kwargs):
+    previewer = LOTSSPreview(**kwargs)
+    return previewer.visit(observation)

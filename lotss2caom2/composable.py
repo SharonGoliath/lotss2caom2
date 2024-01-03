@@ -67,23 +67,53 @@
 #
 
 """
-Implements the default entry point functions for the workflow 
+Implements the default entry point functions for the workflow
 application.
 
 'run' executes based on either provided lists of work, or files on disk.
 'run_incremental' executes incrementally, usually based on time-boxed intervals.
+
+What I think the order of operations is (pagination is probably not involved):
+1. Get the number of records - get the IDs for all the records?
+    - 841 Mosaic IDs, how many files per mosaic?
+        - 1 for P000+23
+        - also 1 for P124+62
+    - max record length == 1000? (confirm this) - from what I can tell, there is no max record length with the
+      TAP service (100,000 rows from the form, anyway - https://vo.astron.nl/__system__/adql/query/form)
+    - 1 Observation / Row from querying lotss_dr2.mosaics from https://vo.astron.nl/tap
+2. For each Mosaic ID, get all the metadata from lotss_dr2.mosaics
+    - query the lotss_dr2.mosaics table
+    - then query the related_products page - this is where the links for the file headers are found
+    - get the file headers for each mosaic and process each header
+        - 1 Plane / Mosaic
+        - n Artifacts / Plane - one for each link on the related_products page - or just 1 for each of the
+        files in the header package?
+
+The supported task type will be INGEST (no data will be transferred, so no SCRAPE/STORE/MODIFY).
+
+A re-ingest will always hit ASTRON, as there's no data at CADC to scrape.
 """
 
 import logging
 import sys
 import traceback
 
-from caom2pipe.run_composable import run_by_state, run_by_todo
-from lotss2caom2 import fits2caom2_augmentation
+from caom2pipe.manage_composable import Config
+from caom2pipe.name_builder_composable import EntryBuilder
+from caom2pipe.run_composable import run_by_todo
+from lotss2caom2 import clients, data_source, fits2caom2_augmentation, main_app, preview_augmentation
 
 
-META_VISITORS = [fits2caom2_augmentation]
+META_VISITORS = [fits2caom2_augmentation, preview_augmentation]
 DATA_VISITORS = []
+
+
+def _common_init():
+    builder = EntryBuilder(main_app.LOTSSName)
+    config = Config()
+    config.get_executors()
+    astron_clients = clients.ASTRONClientCollection(config)
+    return builder, config, astron_clients
 
 
 def _run():
@@ -93,7 +123,14 @@ def _run():
     :return 0 if successful, -1 if there's any sort of failure. Return status
         is used by airflow for task instance management and reporting.
     """
-    return run_by_todo(meta_visitors=META_VISITORS, data_visitors=DATA_VISITORS)
+    builder, config, astron_clients = _common_init()
+    return run_by_todo(
+        clients=astron_clients,
+        config=config,
+        meta_visitors=META_VISITORS,
+        data_visitors=DATA_VISITORS,
+        name_builder=builder,
+    )
 
 
 def run():
@@ -108,17 +145,30 @@ def run():
         sys.exit(-1)
 
 
-def _run_incremental():
-    """Uses a state file with a timestamp to identify the work to be done.
+def _run_remote():
     """
-    return run_by_state(meta_visitors=META_VISITORS, data_visitors=DATA_VISITORS)
+    Uses a todo file to identify the work to be done.
+
+    :return 0 if successful, -1 if there's any sort of failure. Return status
+        is used by airflow for task instance management and reporting.
+    """
+    builder, config, astron_clients = _common_init()
+    source = data_source.ASTRONPyVODataSource(config, astron_clients)
+    return run_by_todo(
+        clients=astron_clients,
+        config=config,
+        meta_visitors=META_VISITORS,
+        data_visitors=DATA_VISITORS,
+        name_builder=builder,
+        sources=[source],
+    )
 
 
-def run_incremental():
-    """Wraps _run_incremental in exception handling."""
+def run_remote():
+    """Wraps _run in exception handling, with sys.exit calls."""
     try:
-        _run_incremental()
-        sys.exit(0)
+        result = _run_remote()
+        sys.exit(result)
     except Exception as e:
         logging.error(e)
         tb = traceback.format_exc()

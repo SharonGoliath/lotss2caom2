@@ -61,85 +61,38 @@
 #  <http://www.gnu.org/licenses/>.      pas le cas, consultez :
 #                                       <http://www.gnu.org/licenses/>.
 #
-#  $Revision: 4 $
+#  Revision: 4
 #
 # ***********************************************************************
 #
 
-from mock import patch
-
-from lotss2caom2 import fits2caom2_augmentation, main_app, metadata_reader
-from caom2.diff import get_differences
-from caom2pipe import astro_composable as ac
-from caom2pipe import manage_composable as mc
-from caom2pipe import reader_composable as rdc
-
-import glob
-import helpers
-import os
-import shutil
-
-THIS_DIR = os.path.dirname(os.path.realpath(__file__))
-TEST_DATA_DIR = os.path.join(THIS_DIR, 'data')
+import pyvo as vo
+from caom2pipe.client_composable import ClientCollection
+from caom2pipe.manage_composable import get_endpoint_session
 
 
-def pytest_generate_tests(metafunc):
-    obs_id_list = glob.glob(f'{TEST_DATA_DIR}/P*')
-    metafunc.parametrize('test_name', obs_id_list)
+__all__ = ['ASTRONClientCollection']
 
 
-@patch('lotss2caom2.metadata_reader.http_get')
-@patch('lotss2caom2.metadata_reader.query_endpoint_session')
-@patch('lotss2caom2.clients.ASTRONClientCollection')
-def test_main_app(clients_mock, endpoint_mock, http_get_mock, test_name, test_config):
-    clients_mock.py_vo_tap_client.search.side_effect = helpers._search_mosaic_id_mock
+class ASTRONClientCollection(ClientCollection):
 
-    def _endpoint_mock(url, ignore_session):
-        result = type('response', (), {})()
-        result.close = lambda : None
-        with open(f'{test_name}/Datalink_response_obs.html') as f:
-            result.text = f.read()
-        return result
+    def __init__(self, config):
+        super().__init__(config)
+        self._py_vo_tap_client = vo.dal.TAPService('ivo://astron.nl/tap')
+        self._https_session = get_endpoint_session()
 
-    endpoint_mock.side_effect = _endpoint_mock
+    @property
+    def https_session(self):
+        return self._https_session
 
-    def _http_get_mock(url, fqn):
-        assert fqn == '/tmp/fits_headers.tar', f'wrong url {fqn}'
-        shutil.copy(f'{test_name}/fits_headers.tar', '/tmp')
+    @https_session.setter
+    def https_session(self, value):
+        self._https_session = value
 
-    http_get_mock.side_effect = _http_get_mock
-    storage_name = main_app.LOTSSName(test_name)
-    test_reader = metadata_reader.LOTSSDR2MetadataReader(clients_mock)
-    test_reader.set(storage_name)
-    kwargs = {
-        'storage_name': storage_name,
-        'metadata_reader': test_reader,
-        'config': test_config,
-    }
-    expected_fqn = f'{test_name}/{os.path.basename(test_name)}.expected.xml'
-    in_fqn = expected_fqn.replace('.expected', '.in')
-    actual_fqn = expected_fqn.replace('expected', 'actual')
-    if os.path.exists(actual_fqn):
-        os.unlink(actual_fqn)
-    observation = None
-    if os.path.exists(in_fqn):
-        observation = mc.read_obs_from_file(in_fqn)
-    observation = fits2caom2_augmentation.visit(observation, **kwargs)
-    if observation is None:
-        assert False, f'Did not create observation for {test_name}'
-    else:
-        if os.path.exists(expected_fqn):
-            expected = mc.read_obs_from_file(expected_fqn)
-            compare_result = get_differences(expected, observation)
-            if compare_result is not None:
-                mc.write_obs_to_file(observation, actual_fqn)
-                compare_text = '\n'.join([r for r in compare_result])
-                msg = (
-                    f'Differences found in observation {expected.observation_id}\n'
-                    f'{compare_text}'
-                )
-                raise AssertionError(msg)
-        else:
-            mc.write_obs_to_file(observation, actual_fqn)
-            assert False, f'nothing to compare to for {test_name}, missing {expected_fqn}'
-    # assert False  # cause I want to see logging messages
+    @property
+    def py_vo_tap_client(self):
+        return self._py_vo_tap_client
+
+    @py_vo_tap_client.setter
+    def py_vo_tap_client(self, value):
+        self._py_vo_tap_client = value
