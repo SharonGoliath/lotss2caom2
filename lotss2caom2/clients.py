@@ -78,7 +78,7 @@ class ASTRONClientCollection(ClientCollection):
 
     def __init__(self, config):
         super().__init__(config)
-        self._py_vo_tap_client = vo.dal.TAPService('ivo://astron.nl/tap')
+        self._py_vo_tap_client = vo.dal.TAPService(config.data_sources[0])
         self._https_session = get_endpoint_session()
 
     @property

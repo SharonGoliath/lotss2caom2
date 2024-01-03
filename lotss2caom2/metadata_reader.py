@@ -69,18 +69,17 @@
 import tarfile
 from os import listdir, unlink
 from os.path import basename, dirname, exists
-from bs4 import BeautifulSoup
-from caom2pipe.astro_composable import make_headers_from_file
-from caom2pipe.manage_composable import http_get, query_endpoint_session
+from caom2pipe.astro_composable import get_vo_table_session, make_headers_from_file
+from caom2pipe.manage_composable import http_get
 from caom2pipe.reader_composable import MetadataReader
 
 
-__all__ = ['LOTSSDR2MetadataReader', 'html_scrape']
+__all__ = ['LOTSSDR2MetadataReader']
 
 
 class LOTSSDR2MetadataReader(MetadataReader):
 
-    def __init__(self, clients):
+    def __init__(self, clients, http_get_timeout):
         super().__init__()
         self._service = clients.py_vo_tap_client
         self._session = clients.https_session
@@ -92,11 +91,11 @@ class LOTSSDR2MetadataReader(MetadataReader):
         # the URL that links to the tar of the FITS headers from the related_products URI
         self._headers_uri = None
         self._destination_uris = []
+        self._http_get_timeout = http_get_timeout
 
     def _retrieve_file_info(self, key, source_name):
         """
-        :param key: Artifact URI
-        :param source_name: fully-qualified name at the data source
+        There are no files at CADC except for the preview and thumbnail, so this information is not necessary.
         """
         pass
 
@@ -127,29 +126,20 @@ class LOTSSDR2MetadataReader(MetadataReader):
         """Go to the 'related_products' page and get all the metadata from that page."""
         self._logger.debug(f'Begin _get_related_products_metadata from {self._related_products_uri}')
         if self._related_products_uri:
-            response = None
-            try:
-                response = query_endpoint_session(self._related_products_uri, self._session)
-                if response is None:
-                    self._logger.warning(f'No response from {self._related_products_uri}.')
-                else:
-                    soup = BeautifulSoup(response.text, features='lxml')
-                    hrefs = soup.find_all('a')
-                    for href in hrefs:
-                        href_name = href.get('href')
-                        if 'preview' in href_name:
-                            self._preview_uri = href_name
-                            self._logger.debug(f'Found preview URL {href_name}')
-                        elif 'fits' in href_name:
-                            if 'headers.tar' in href_name:
-                                self._headers_uri = href_name
-                                self._logger.debug(f'Found Headers URL {href_name}')
-                            else:
-                                self._destination_uris.append(href_name)
-                                self._logger.debug(f'Found FITS URL {href_name}')
-            finally:
-                if response:
-                    response.close()
+            vo_table, error_message = get_vo_table_session(self._related_products_uri, self._session)
+            for row in vo_table.array:
+                # 1 == 'access_url'
+                access_url = row[1]
+                if 'preview' in access_url:
+                    self._preview_uri = access_url
+                    self._logger.debug(f'Found preview URL {access_url}')
+                elif 'fits' in access_url:
+                    if 'headers.tar' in access_url:
+                        self._headers_uri = access_url
+                        self._logger.debug(f'Found Headers URL {access_url}')
+                    else:
+                        self._destination_uris.append(access_url)
+                        self._logger.debug(f'Found FITS URL {access_url}')
         self._logger.debug(f'End _get_related_products_metadata')
 
     def _get_headers_metadata(self):
@@ -159,7 +149,7 @@ class LOTSSDR2MetadataReader(MetadataReader):
             local_fqn = f'/tmp/{basename(self._headers_uri)}'
             if exists(local_fqn):
                 unlink(local_fqn)
-            http_get(self._headers_uri, local_fqn)
+            http_get(self._headers_uri, local_fqn, self._http_get_timeout)
             if exists(local_fqn):
                 with tarfile.open(local_fqn) as f:
                     f.extractall('/tmp', filter='data')
@@ -191,7 +181,10 @@ class LOTSSDR2MetadataReader(MetadataReader):
 
     def set(self, storage_name):
         super().set(storage_name)
-        self._logger.info(f'Replace destination URIs for {storage_name._destination_uris[0]}')
+        self._logger.info(
+            f'Replace destination URIs for {storage_name._destination_uris[0]} with {len(self._destination_uris)} '
+            'new URIs'
+        )
         storage_name._destination_uris = self._destination_uris
 
     def unset(self, storage_name):

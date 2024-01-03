@@ -109,14 +109,13 @@ class LOTSSPreview(PreviewVisitor):
         self._input_fqn = self._storage_name.get_file_fqn(self._working_dir)
         self._preview_fqn = os.path.join(os.path.dirname(self._input_fqn), self._storage_name.prev)
         self._thumb_fqn = os.path.join(os.path.dirname(self._input_fqn), self._storage_name.thumb)
-        self._logger.error(f'input {self._input_fqn} prev {self._preview_fqn} thumb {self._thumb_fqn}')
         self._logger.debug(self)
 
     def visit(self, observation):
         count = 0
         if self._storage_name.product_id in observation.planes.keys():
             plane = observation.planes[self._storage_name.product_id]
-            self._logger.error(
+            self._logger.debug(
                 f'Preview generation for observation {observation.observation_id}, plane {plane.product_id}.'
             )
             count += self._do_prev(plane, observation.observation_id)

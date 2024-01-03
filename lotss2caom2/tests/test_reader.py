@@ -74,31 +74,30 @@ import helpers
 
 
 @patch('lotss2caom2.metadata_reader.http_get')
-@patch('lotss2caom2.metadata_reader.query_endpoint_session')
 @patch('lotss2caom2.clients.ASTRONClientCollection')
-def test_reader(clients_mock, endpoint_mock, http_get_mock, test_data_dir, test_config):
+def test_reader(clients_mock, http_get_mock, test_data_dir, test_config):
     clients_mock.py_vo_tap_client.search.side_effect = helpers._search_mosaic_id_mock
 
-    def _endpoint_mock(url, ignore_session):
+    def _endpoint_mock(url):
         assert (
             url == 'https://vo.astron.nl/lotss_dr2/q/dlmosaic/dlmeta?ID=ivo%3A//astron.nl/%7E%3FLoTSS-DR2/P000%2B23'
         ), f'wrong url {url}'
         result = type('response', (), {})()
         result.close = lambda : None
-        with open(f'{test_data_dir}/P000+23/Datalink_response_obs.html') as f:
+        with open(f'{test_data_dir}/P000+23/obs.xml') as f:
             result.text = f.read()
         return result
 
-    endpoint_mock.side_effect = _endpoint_mock
+    clients_mock.https_session.get.side_effect = _endpoint_mock
 
-    def _http_get_mock(url, fqn):
+    def _http_get_mock(url, fqn, ignore_timeout):
         assert url == 'https://lofar-webdav.grid.surfsara.nl:2881/P000+23/fits_headers.tar', f'wrong url {url}'
         assert fqn == '/tmp/fits_headers.tar', f'wrong url {fqn}'
         shutil.copy(f'{test_data_dir}/P000+23/fits_headers.tar', '/tmp')
 
     http_get_mock.side_effect = _http_get_mock
 
-    test_subject = LOTSSDR2MetadataReader(clients_mock)
+    test_subject = LOTSSDR2MetadataReader(clients_mock, test_config.http_get_timeout)
     assert test_subject is not None, 'ctor'
 
     test_mosaic_id = 'P000+23'

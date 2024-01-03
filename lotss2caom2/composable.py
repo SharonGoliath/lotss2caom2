@@ -113,7 +113,7 @@ def _common_init():
     config = Config()
     config.get_executors()
     astron_clients = clients.ASTRONClientCollection(config)
-    reader = metadata_reader.LOTSSDR2MetadataReader(astron_clients)
+    reader = metadata_reader.LOTSSDR2MetadataReader(astron_clients, config.http_get_timeout)
     return builder, config, astron_clients, reader
 
 
