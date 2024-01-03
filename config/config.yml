@@ -16,14 +16,14 @@ storage_inventory_tap_resource_id: ivo://cadc.nrc.ca/global/luskan
 # file that contains the list of entries to process
 todo_file_name: todo.txt
 data_sources:
-  - vos:test
+  - ivo://astron.nl/tap
 data_source_extensions:
   - .fits
 # values True False
 # when True, the application will look for files with
 # .fits, .gz, .json endings as defining the work to be 
 # done.
-use_local_files: True
+use_local_files: False
 # values DEBUG INFO WARNING ERROR
 logging_level: DEBUG
 # values True False
@@ -51,8 +51,8 @@ retry_file_name: retries.txt
 progress_file_name: progress.txt
 #
 collection: LOTSS
-scheme: cadc
-preview_scheme: cadc
+scheme: astron
+preview_scheme: astron
 #
 # CADC service execution metrics
 #

@@ -194,6 +194,6 @@ class LOTSSDR2MetadataReader(MetadataReader):
         self._logger.info(f'Replace destination URIs for {storage_name._destination_uris[0]}')
         storage_name._destination_uris = self._destination_uris
 
-    def unset(self):
-        super().unset()
+    def unset(self, storage_name):
+        super().unset(storage_name)
         self._reset()
