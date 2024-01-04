@@ -215,7 +215,7 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
             plane.artifacts.pop(artifact_uri)
         artifact = cc.copy_artifact(orig_artifact)
         artifact.content_type = 'application/fits'
-        artifact.content_length = self._mosaic_metadata['accsize']
+        artifact.content_length = self._mosaic_metadata['accsize'].item()
         artifact.uri = artifact_uri
         pixel_size = self._mosaic_metadata['pixelsize']
         ref_pixel = self._mosaic_metadata['wcs_refpixel']
@@ -226,14 +226,14 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
             for orig_chunk in orig_part.chunks:
                 chunk = cc.copy_chunk(orig_chunk)
                 if chunk.position is not None and chunk.position.axis is not None and chunk.position.axis.function is not None:
-                    chunk.position.axis.function.cd11 = cd_matrix[0]
-                    chunk.position.axis.function.cd12 = cd_matrix[1]
-                    chunk.position.axis.function.cd21 = cd_matrix[2]
-                    chunk.position.axis.function.cd22 = cd_matrix[3]
-                    chunk.position.axis.function.dimension.naxis1 = pixel_size[0]
-                    chunk.position.axis.function.dimension.naxis2 = pixel_size[1]
-                    chunk.position.axis.function.ref_coord.coord1.pix = ref_pixel[0]
-                    chunk.position.axis.function.ref_coord.coord2.pix = ref_pixel[1]
+                    chunk.position.axis.function.cd11 = cd_matrix[0].item()
+                    chunk.position.axis.function.cd12 = cd_matrix[1].item()
+                    chunk.position.axis.function.cd21 = cd_matrix[2].item()
+                    chunk.position.axis.function.cd22 = cd_matrix[3].item()
+                    chunk.position.axis.function.dimension.naxis1 = pixel_size[0].item()
+                    chunk.position.axis.function.dimension.naxis2 = pixel_size[1].item()
+                    chunk.position.axis.function.ref_coord.coord1.pix = ref_pixel[0].item()
+                    chunk.position.axis.function.ref_coord.coord2.pix = ref_pixel[1].item()
                 part.chunks.append(chunk)
         plane.artifacts[artifact_uri] = artifact
         self._logger.debug('End _add_mosaic_artifact')
