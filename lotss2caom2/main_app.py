@@ -290,18 +290,18 @@ class DR2MosaicScienceMapping(DR2MosaicAuxiliaryMapping):
         bp.set('Chunk.position.axis.function.cd21', 0.0)
         bp.add_attribute('Chunk.position.axis.function.cd22', 'CDELT2')
 
-        bp.configure_energy_axis(4)
-        # TODO how to translate "2 channels per 0.195 MHz subband" to resolution?
-        bp.set('Chunk.energy.specsys', 'TOPOCENT')
-        bp.set('Chunk.energy.bandpassName', self._mosaic_metadata['bandpassid'])
-        bp.set('Chunk.energy.axis.axis.ctype', 'WAVE')
-        bp.set('Chunk.energy.axis.axis.cunit', self._mosaic_metadata['bandpassunit'])
-        bp.set('Chunk.energy.axis.range.start.pix', 0.5)
-        bp.set('Chunk.energy.axis.range.start.val', self._mosaic_metadata['bandpasshi'])
-        bp.set('Chunk.energy.axis.range.end.pix', 1.5)
-        bp.set('Chunk.energy.axis.range.end.val', self._mosaic_metadata['bandpasslo'])
+        # bp.configure_energy_axis(4)
+        # # TODO how to translate "2 channels per 0.195 MHz subband" to resolution?
+        # bp.set('Chunk.energy.specsys', 'TOPOCENT')
+        # bp.set('Chunk.energy.bandpassName', self._mosaic_metadata['bandpassid'])
+        # bp.set('Chunk.energy.axis.axis.ctype', 'WAVE')
+        # bp.set('Chunk.energy.axis.axis.cunit', self._mosaic_metadata['bandpassunit'])
+        # bp.set('Chunk.energy.axis.range.start.pix', 0.5)
+        # bp.set('Chunk.energy.axis.range.start.val', self._mosaic_metadata['bandpasshi'])
+        # bp.set('Chunk.energy.axis.range.end.pix', 1.5)
+        # bp.set('Chunk.energy.axis.range.end.val', self._mosaic_metadata['bandpasslo'])
 
-        bp.configure_polarization_axis(3)
+        # bp.configure_polarization_axis(3)
 
         bp.configure_time_axis(5)
         bp.set('Chunk.time.axis.axis.ctype', 'TIME')
@@ -325,6 +325,14 @@ class DR2MosaicSciencePolarization(DR2MosaicScienceMapping):
 
         bp.configure_energy_axis(4)
         # TODO how to translate "2 channels per 0.195 MHz subband" to resolution?
+        bp.set('Chunk.energy.specsys', 'TOPOCENT')
+        bp.set('Chunk.energy.bandpassName', self._mosaic_metadata['bandpassid'])
+        bp.set('Chunk.energy.axis.axis.ctype', 'WAVE')
+        bp.set('Chunk.energy.axis.axis.cunit', self._mosaic_metadata['bandpassunit'])
+        bp.set('Chunk.energy.axis.range.start.pix', 0.5)
+        bp.set('Chunk.energy.axis.range.start.val', self._mosaic_metadata['bandpasshi'])
+        bp.set('Chunk.energy.axis.range.end.pix', 1.5)
+        bp.set('Chunk.energy.axis.range.end.val', self._mosaic_metadata['bandpasslo'])
 
         bp.configure_polarization_axis(3)
         self._logger.debug('Done accumulate_bp.')
