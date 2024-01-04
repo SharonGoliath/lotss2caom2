@@ -156,7 +156,7 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
 
         bp.set('Observation.algorithm.name', 'mosaic')
 
-        bp.set('Observation.instrument.name', self._mosaic_metadata['instId'])
+        bp.set('Observation.instrument.name', self._mosaic_metadata['instid'])
 
         bp.set('Observation.proposal.id', 'LoTSS')
         bp.set('Observation.proposal.pi', 'T.W. Shimwell')
@@ -181,7 +181,7 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
         bp.set('Plane.provenance.version', '_get_provenance_version()')
         bp.set('Plane.provenance.project', 'LoTSS DR2')
         bp.set('Plane.provenance.producer', 'ASTRON')
-        bp.set('Plane.provenance.runID', self._mosaic_metadata['data_PID'])
+        bp.set('Plane.provenance.runID', self._mosaic_metadata['data_pid'])
         bp.set('Plane.provenance.lastExecuted', '')
         bp.set('Plane.provenance.reference', self._mosaic_metadata['related_products'])
         bp.set('Plane.provenance.keywords', '_get_provenance_keywords()')
@@ -217,9 +217,9 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
         artifact.content_type = 'application/fits'
         artifact.content_length = self._mosaic_metadata['accsize']
         artifact.uri = artifact_uri
-        pixel_size = self._parse_masked_array('pixelSize')
-        ref_pixel = self._parse_masked_array('wcs_refPixel')
-        cd_matrix = self._parse_masked_array('wcs_cdmatrix')
+        pixel_size = self._mosaic_metadata['pixelsize']
+        ref_pixel = self._mosaic_metadata['wcs_refpixel']
+        cd_matrix = self._mosaic_metadata['wcs_cdmatrix']
         for orig_part in orig_artifact.parts.values():
             part = cc.copy_part(orig_part)
             artifact.parts.add(part)
@@ -264,14 +264,6 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
             result = temp.split()[1]
         return result
 
-    def _parse_masked_array(self, key):
-        temp = self._mosaic_metadata[key].replace('masked_array(data=[', '').replace(']', '')
-        if '.' in temp:
-            result = [float(ii) for ii in temp.split(',')]
-        else:
-            result = [int(ii) for ii in temp.split(',')]
-        return result
-
     def _update_artifact(self, artifact):
         # TODO - clean up unnecessary execution
         # self._logger.error(f'working on {artifact.uri}')
@@ -309,7 +301,7 @@ class DR2MosaicScienceMapping(DR2MosaicAuxiliaryMapping):
         bp.set('Chunk.time.axis.function.naxis', 1)
         bp.set('Chunk.time.axis.function.delta', 16 / 24.0)
         bp.set('Chunk.time.axis.function.refCoord.pix', 0.5)
-        bp.set('Chunk.time.axis.function.refCoord.val', self._mosaic_metadata['dateObs'])
+        bp.set('Chunk.time.axis.function.refCoord.val', self._mosaic_metadata['dateobs'])
         bp.set('Chunk.time.resolution', 8)
         self._logger.debug('Done accumulate_bp.')
 

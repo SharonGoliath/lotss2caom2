@@ -110,7 +110,15 @@ class LOTSSDR2MetadataReader(MetadataReader):
         self._get_headers_metadata()
 
     def _get_mosaic_tap_metadata(self, mosaic_id):
-        """Get all the metadata from the TAP query for a mosaic id"""
+        """Get all the metadata from the TAP query for a mosaic id
+
+        Field names at time of writing:
+        ('accref', 'owner', 'embargo', 'mime', 'accsize', 'centeralpha', 'centerdelta', 'imagetitle', 'instid',
+         'dateobs', 'naxes', 'pixelsize', 'pixelscale', 'refframe', 'wcs_equinox', 'wcs_projection', 'wcs_refpixel',
+         'wcs_refvalues', 'wcs_cdmatrix', 'bandpassid', 'bandpassunit', 'bandpassrefval', 'bandpasshi',
+         'bandpasslo', 'pixflags', 'coverage', 'mosaic_id', 'related_products', 'lofar_obsids', 'data_pid',
+         'adler32')
+        """
         self._logger.debug(f'Begin _get_mosaic_tap_metadata for {mosaic_id}')
         results = self._service.search(f"SELECT * FROM lotss_dr2.mosaics WHERE mosaic_id='{mosaic_id}'")
         if len(results) == 1:
