@@ -83,7 +83,7 @@ def test_reader(clients_mock, http_get_mock, test_data_dir, test_config):
             url == 'https://vo.astron.nl/lotss_dr2/q/dlmosaic/dlmeta?ID=ivo%3A//astron.nl/%7E%3FLoTSS-DR2/P000%2B23'
         ), f'wrong url {url}'
         result = type('response', (), {})()
-        result.close = lambda : None
+        result.close = lambda: None
         with open(f'{test_data_dir}/P000+23/obs.xml') as f:
             result.text = f.read()
         return result
@@ -104,5 +104,15 @@ def test_reader(clients_mock, http_get_mock, test_data_dir, test_config):
     test_storage_name = LOTSSName(test_mosaic_id)
     test_subject.set(test_storage_name)
 
-    assert len(test_subject.headers) == 7, f'wrong header length {len(test_subject.headers)}'
-    assert len(test_storage_name.destination_uris) == 6, f'wrong uris len {test_storage_name}'
+    assert len(test_subject.headers) == 8, f'wrong header length {len(test_subject.headers)}'
+    assert len(test_storage_name.destination_uris) == 8, f'wrong uris len {test_storage_name}'
+
+    test_uri_prefix = f'{test_storage_name.scheme}:{test_storage_name.collection}/{test_mosaic_id}/'
+    for check in [test_storage_name.destination_uris, test_subject.headers.keys()]:
+        assert f'{test_uri_prefix}low-mosaic-blanked.fits' in check, f'{check.__class__.__name__} low-mosaic-blanked'
+        assert f'{test_uri_prefix}low-mosaic-weights.fits' in check, f'{check.__class__.__name__} low-mosaic-weights'
+        assert f'{test_uri_prefix}mosaic-blanked.fits' in check, f'{check.__class__.__name__} mosaic-blanked'
+        assert f'{test_uri_prefix}mosaic-weights.fits' in check, f'{check.__class__.__name__} mosaic-weights'
+        assert f'{test_uri_prefix}mosaic.pybdsmmask.fits' in check, f'{check.__class__.__name__} mosaic.pybdsmmask'
+        assert f'{test_uri_prefix}mosaic.resid.fits' in check, f'{check.__class__.__name__} mosaic.resid'
+        assert f'{test_uri_prefix}mosaic-rms.fits' in check, f'{check.__class__.__name__} mosaic.rms'

@@ -79,7 +79,6 @@ import helpers
 
 
 def pytest_generate_tests(metafunc):
-    # obs_id_list = glob.glob(f'{TEST_DATA_DIR}/*/*.header')
     obs_id_list = glob.glob(f'{metafunc.config.invocation_dir}/data/P*')
     metafunc.parametrize('test_name', obs_id_list)
 
@@ -92,7 +91,7 @@ def test_preview_augmentation(clients_mock, http_get_mock, preview_get_mock, tes
 
     def _endpoint_mock(url):
         result = type('response', (), {})()
-        result.close = lambda : None
+        result.close = lambda: None
         with open(f'{test_name}/obs.xml') as f:
             result.text = f.read()
         return result
@@ -105,6 +104,8 @@ def test_preview_augmentation(clients_mock, http_get_mock, preview_get_mock, tes
     http_get_mock.side_effect = _http_get_tar_mock
     preview_get_mock.side_effect = Mock()
     observation = read_obs_from_file(f'{test_name}/{basename(test_name)}.expected.xml')
+    artifact_keys = get_all_artifact_keys(observation)
+    assert len(artifact_keys) == 8, f'pre-condition artifact count {len(artifact_keys)}'
     storage_name = LOTSSName(test_name)
     test_reader = LOTSSDR2MetadataReader(clients_mock, test_config.http_get_timeout)
     test_reader.set(storage_name)
@@ -117,4 +118,4 @@ def test_preview_augmentation(clients_mock, http_get_mock, preview_get_mock, tes
     observation = visit(observation, **kwargs)
 
     artifact_keys = get_all_artifact_keys(observation)
-    assert len(artifact_keys) == 9, f'wrong number of artifacts {len(artifact_keys)}'
+    assert len(artifact_keys) == 10, f'wrong number of artifacts {len(artifact_keys)}'

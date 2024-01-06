@@ -75,7 +75,6 @@ __all__ = ['ASTRONClientCollection']
 
 
 class ASTRONClientCollection(ClientCollection):
-
     def __init__(self, config):
         super().__init__(config)
         self._py_vo_tap_client = vo.dal.TAPService(config.data_sources[0])

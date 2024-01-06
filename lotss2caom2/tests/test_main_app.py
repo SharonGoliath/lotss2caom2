@@ -95,7 +95,7 @@ def test_main_app(clients_mock, http_get_mock, test_name, test_config):
 
     def _endpoint_mock(url):
         result = type('response', (), {})()
-        result.close = lambda : None
+        result.close = lambda: None
         with open(f'{test_name}/obs.xml') as f:
             result.text = f.read()
         return result
@@ -133,10 +133,7 @@ def test_main_app(clients_mock, http_get_mock, test_name, test_config):
             if compare_result is not None:
                 mc.write_obs_to_file(observation, actual_fqn)
                 compare_text = '\n'.join([r for r in compare_result])
-                msg = (
-                    f'Differences found in observation {expected.observation_id}\n'
-                    f'{compare_text}'
-                )
+                msg = f'Differences found in observation {expected.observation_id}\n' f'{compare_text}'
                 raise AssertionError(msg)
         else:
             mc.write_obs_to_file(observation, actual_fqn)

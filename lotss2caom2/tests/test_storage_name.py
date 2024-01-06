@@ -90,9 +90,8 @@ def test_storage_name(test_config):
         assert test_subject.file_id is None, f'wrong file id {index}'
         assert test_subject.file_uri == test_uri, f'wrong uri {index}'
         assert test_subject.obs_id == test_obs_id, f'wrong obs id {index}'
-        assert test_subject.product_id == 'mosaic', f'wrong product id {index}'
+        assert test_subject.product_id == f'{test_mosaic_id}_mosaic', f'wrong product id {index}'
         assert test_subject.source_names == [entry], f'wrong source names {index}'
-        assert (
-            test_subject.destination_uris == [f'{test_config.collection}/{test_mosaic_id}/']
-        ), f'wrong uris {index} {test_subject}'
-
+        assert test_subject.destination_uris == [
+            f'{test_config.collection}/{test_mosaic_id}/'
+        ], f'wrong uris {index} {test_subject}'

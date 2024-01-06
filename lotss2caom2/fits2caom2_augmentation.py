@@ -68,7 +68,7 @@
 
 
 from caom2 import ProductType
-from caom2utils import BlueprintParser, FitsParser
+from caom2utils import ContentParser, FitsParser
 from caom2pipe import caom_composable as cc
 from lotss2caom2 import main_app
 
@@ -80,7 +80,7 @@ class LoTSSFits2caom2Visitor(cc.Fits2caom2Visitor):
     def __init__(self, observation, **kwargs):
         super().__init__(observation, **kwargs)
 
-    def _get_mapping(self, headers):
+    def _get_mapping(self, headers, dest_uri):
         return main_app.mapping_factory(
             self._storage_name,
             headers,
@@ -88,15 +88,19 @@ class LoTSSFits2caom2Visitor(cc.Fits2caom2Visitor):
             self._observable,
             self._observation,
             self._config,
-            self._metadata_reader.headers[self._storage_name.mosaic_id],
+            self._metadata_reader.headers[self._metadata_reader._mosaic_uri],
+            dest_uri,
         )
 
     def _get_parser(self, headers, blueprint, uri):
-        if self._storage_name.artifact_product_type in [ProductType.AUXILIARY, ProductType.WEIGHT, ProductType.PREVIEW]:
-            parser = BlueprintParser(blueprint, uri)
+        if (
+            uri
+            == f'{self._storage_name.scheme}:{self._storage_name.collection}/{self._storage_name.mosaic_id}/mosaic.fits'
+        ):
+            parser = ContentParser(blueprint, uri)
         else:
             parser = FitsParser(headers, blueprint, uri)
-        self._logger.debug(f'Creating {parser.__class__.__name__} for {self._storage_name.file_uri}')
+        self._logger.debug(f'Creating {parser.__class__.__name__} for {uri}')
         return parser
 
 

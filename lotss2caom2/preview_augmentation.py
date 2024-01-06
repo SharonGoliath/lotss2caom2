@@ -92,12 +92,8 @@ class LOTSSPreview(PreviewVisitor):
         if self._storage_name is None:
             raise CadcException('Visitor needs a storage_name parameter.')
         self._metadata_reader = kwargs.get('metadata_reader')
-        self._preview_fqn = os.path.join(
-            self._working_dir, self._storage_name.prev
-        )
-        self._thumb_fqn = os.path.join(
-            self._working_dir, self._storage_name.thumb
-        )
+        self._preview_fqn = os.path.join(self._working_dir, self._storage_name.prev)
+        self._thumb_fqn = os.path.join(self._working_dir, self._storage_name.thumb)
         self._delete_list = []
         # keys are uris, values are lists, where the 0th entry is a file name,
         # and the 1th entry is the artifact type
@@ -121,7 +117,9 @@ class LOTSSPreview(PreviewVisitor):
             count += self._do_prev(plane, observation.observation_id)
             self._augment_artifacts(plane)
             self._delete_list_of_files()
-        self._logger.info(f'Completed preview augmentation for {observation.observation_id}. Changed {count} artifacts.')
+        self._logger.info(
+            f'Completed preview augmentation for {observation.observation_id}. Changed {count} artifacts.'
+        )
         self._report = {'artifacts': count}
         return observation
 
@@ -136,9 +134,7 @@ class LOTSSPreview(PreviewVisitor):
                 self.add_preview(self._storage_name.prev_uri, self._storage_name.prev, ProductType.PREVIEW)
                 count += self._gen_thumbnail()
                 if count == 1:
-                    self.add_preview(
-                        self._storage_name.thumb_uri, self._storage_name.thumb, ProductType.THUMBNAIL
-                    )
+                    self.add_preview(self._storage_name.thumb_uri, self._storage_name.thumb, ProductType.THUMBNAIL)
         self._logger.debug(f'End generate_plots')
         return count
 
