@@ -164,10 +164,7 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
         bp.set('Observation.proposal.id', 'LoTSS')
         bp.set('Observation.proposal.pi', 'T.W. Shimwell')
         bp.set('Observation.proposal.title', 'LOFAR Two-metre Sky Survey')
-        # from https://www.aanda.org/articles/aa/full_html/2022/03/aa42484-21/aa42484-21.html
-        bp.set(
-            'Observation.proposal.keywords', 'surveys,catalogs,radio continuum: general,techniques: image processing'
-        )
+        bp.set('Observation.proposal.keywords', '_get_observation_proposal_keywords()')
 
         bp.set('Observation.target.type', 'field')
 
@@ -231,6 +228,16 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
                                 chunk.naxis = 3
         return self._observation
 
+    def _get_observation_proposal_keywords(self, ext):
+        # values from https://www.aanda.org/articles/aa/full_html/2022/03/aa42484-21/aa42484-21.html
+        # default keyword setting splits on whitespace
+        temp = set()
+        temp.add('surveys')
+        temp.add('catalogs')
+        temp.add('radio continuum: general')
+        temp.add('techniques: image processing')
+        return temp
+
     def _get_provenance_keywords(self, ext):
         # from https://vo.astron.nl/__system__/dc_tables/show/tableinfo/lotss_dr2.mosaics
         d = {
@@ -240,8 +247,9 @@ class DR2MosaicAuxiliaryMapping(cc.TelescopeMapping):
             'X': 'not resampled',
             'V': 'for display only',
         }
-        temp = self._mosaic_metadata['pixflags']
-        return d.get(temp)
+        temp = set()
+        temp.add(d.get(self._mosaic_metadata['pixflags']))
+        return temp
 
     def _get_provenance_name(self, ext):
         temp = self._headers[0].get('ORIGIN')

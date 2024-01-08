@@ -90,7 +90,7 @@ def pytest_generate_tests(metafunc):
 
 @patch('lotss2caom2.metadata_reader.http_get')
 @patch('lotss2caom2.clients.ASTRONClientCollection')
-def test_main_app(clients_mock, http_get_mock, test_name, test_config):
+def test_main_app(clients_mock, http_get_mock, test_name, test_config, test_data_dir):
     clients_mock.py_vo_tap_client.search.side_effect = helpers._search_mosaic_id_mock
 
     def _endpoint_mock(url):
